@@ -82,5 +82,15 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .userDetailsService(userDetailsService)
         ;
 
+        http
+                .sessionManagement()
+                //.maximumSessions(1)
+                //.maxSessionsPreventsLogin(true)
+                .sessionFixation().changeSessionId();
+                //.sessionFixation().none();
+                // 세션 고정 보호
+                // 공격자의 세션으로 로그인하면 공격자의 로그인이 허용된다.
+                // 따라서 session은 고정이 아닌 유동적으로 사용되어야한다.
+
     }
 }
