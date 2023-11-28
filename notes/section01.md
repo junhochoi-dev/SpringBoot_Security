@@ -24,7 +24,7 @@
 - Postgres
 - Lombok
 
-# 01. 인증 API – 프로젝트 구성 및 의존성 추가
+# 02. 인증 API – 프로젝트 구성 및 의존성 추가
 
 `pom.xml`
 ```xml
@@ -68,3 +68,40 @@ protected void configure(HttpSecurity http) throws Exception { 
 }
 ```
 
+기본계정 설정 (`application.properties`)
+```properties
+spring.security.user.name=admin
+spring.security.user.password=admin
+```
+
+# 03. 인증 API – HTTP Basic 인증, BasicAuthenticationFilter
+
+- HTTP는 자체적인 인증 관련 기능을 제공하며 HTTP 표준에 정의된 가장 단순한 인증 기법이다
+- 간단한 설정과 Stateless가 장점 - Session Cookie(JSESSIONID) 사용하지 않음
+- 보호자원 접근시 서버가 클라이언트에게  401 Unauthorized 응답과 함께 WWW-Authenticate header를 기술해서 인증요구를 보냄
+- Client는 ID:Password 값을 Base64로 Encoding한 문자열을 Authorization Header에 추가한 뒤 Server에게 Resource를 요청
+  - Authorization: Basic cmVzdDpyZXN0
+- ID, Password가 Base64로 Encoding되어 있어 ID, Password가 외부에 쉽게 노출되는 구조이기 때문에 SSL이나 TLS는 필수이다
+
+```java
+protected void configure(HttpSecurity http) throws Exception {
+	http.httpBasic();
+}
+```
+
+# 04. 인증 API – Form 인증
+
+`http.formLogin() // Form 로그인 인증 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+	 http.formLogin()
+            .loginPage("/login.html")   				// 사용자 정의 로그인 페이지
+            .defaultSuccessUrl("/home")				// 로그인 성공 후 이동 페이지
+            .failureUrl("/login.html?error=true")		// 로그인 실패 후 이동 페이지
+            .usernameParameter("username")			// 아이디 파라미터명 설정
+            .passwordParameter("password")			// 패스워드 파라미터명 설정
+            .loginProcessingUrl("/login")			// 로그인 Form Action Url
+            .successHandler(loginSuccessHandler())		// 로그인 성공 후 핸들러
+            .failureHandler(loginFailureHandler())		// 로그인 실패 후 핸들러
+}
+```
