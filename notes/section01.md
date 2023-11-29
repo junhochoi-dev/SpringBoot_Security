@@ -59,7 +59,7 @@ SecurityConfiguration → WebSecurityConfigurerAdapter → HttpSecurity → (인
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 @Override
-protected void configure(HttpSecurity http) throws Exception { 
+protected void configure(HttpSecurity http) throws Exception { 
 	http
 		.authorizeRequests()			
 		.anyRequest().authenticated()		
@@ -229,7 +229,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 ```java
 protected void configure(HttpSecurity http) throws Exception {
         http.rememberMe()
-        .rememberMeParameter(“remember”)        // 기본 파라미터명은 remember-me
+        .rememberMeParameter("remember")        // 기본 파라미터명은 remember-me
         .tokenValiditySeconds(3600)             // Default 는 14일
         .alwaysRemember(true)                   // 리멤버 미 기능이 활성화되지 않아도 항상 실행 (일반적으로 False)
         .userDetailsService(userDetailsService)
@@ -327,7 +327,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 `http.sessionManagement() // 세션 관리 기능이 작동함`
 ```java
-protected void configure(HttpSecurity http) throws Exception {     
+protected void configure(HttpSecurity http) throws Exception {     
         http.sessionManagement()
         .maximumSessions(1)                     // 최대 허용 가능 세션 수 , -1 : 무제한 로그인 세션 허용
         .maxSessionsPreventsLogin(true)         // 동시 로그인 차단함,  false : 기존 세션 만료(default)
@@ -366,3 +366,154 @@ protected void configure(HttpSecurity http) throws Exception {
 - SessionCreationPolicy. Stateless	 	:  스프링 시큐리티가 생성하지 않고 존재해도 사용하지 않음
 
 # 11. 인증 API – SessionManagementFilter ConcurrentSessionFilter
+
+> SessionManagementFilter
+
+- 세션 관리
+  - 인증 시 사용자의 세션정보를 등록, 조회, 삭제 등의 세션 이력을 관리
+
+- 동시적 세션 제어
+  - 동일 계정으로 접속이 허용되는 최대 세션수를 제한
+
+- 세션 고정 보호
+  - 인증 할 때마다 세션쿠키를 새로 발급하여 공격자의 쿠키 조작을 방지
+
+- 세션 생성 정책
+  - Always, If_Required, Never, Stateless
+
+> ConcurrentSessionFilter
+
+- 매 요청 마다 현재 사용자의 세션 만료 여부 체크
+- 세션이 만료로 설정되었을 경우 즉시 만료 처리
+- session.isExpired() == true ("This session has been expired")
+  - 로그아웃 처리 
+  - 즉시 오류 페이지 응답
+
+> SessionManagementFilter & ConcurrentSessionFilter
+
+1. 새 사용자가 동일한 계정으로 로그인
+2. SessionManagementFilter가 최대 세선 허용 개수 확인 후 초과시 만료시킴
+3. ConcurrentSessionFilter가 이전 사용자가 이전 세션으로 로그인 시 로그아웃시키고 만료
+
+# 12. 인가 API – 권한 설정 및 표현식
+
+- 선언적 방식
+  - URL
+    - `http.antMatchers("/users/**").hasRole("USER")`
+  - Method
+    - `@PreAuthorize("hasRole('USER’)")`
+    - `public void user(){ System.out.println("user")}`
+
+- 동적 방식 – DB 연동 프로그래밍
+  - URL
+  - Method
+```java
+
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http
+        .antMatcher("/shop/**")
+        .authorizeRequests()
+        .antMatchers("/shop/login", "/shop/users/**").permitAll()
+        .antMatchers("/shop/mypage").hasRole("USER")
+        .antMatchers("/shop/admin/pay").access("hasRole('ADMIN')")
+        .antMatchers("/shop/admin/**").access("hasRole('ADMIN') or hasRole('SYS')")
+        .anyRequest().authenticated()
+}
+```
+※ **주의 사항 - 설정 시 구체적인 경로가 먼저 오고 그것 보다 큰 범위의 경로가 뒤에 오도록 해야 한다**
+
+
+|메소드|동작|
+|-|-|
+|authenticated()   |인증된 사용자의 접근을 허용  |
+|fullyAuthenticated()   |인증된 사용자의 접근을 허용,rememberMe 인증 제외  |
+|permitAll()   |무조건 접근을 허용  |
+|denyAll()   |무조건 접근을 허용하지 않음  |
+|anonymous()   |익명사용자의 접근을 허용  |
+|rememberMe()   |기억하기를 통해 인증된 사용자의 접근을 허용  |
+|access(String)   |주어진 SpEL표현식의 평가 결과가 true이면 접근을 허용  |
+|hasRole(String)   |사용자가 주어진 역할이 있다면 접근을 허용  |
+|hasAuthority(String)   |사용자가 주어진 권한이 있다면  |
+|hasAnyRole(String...)   |사용자가 주어진 권한이 있다면 접근을 허용  |
+|hasAnyAuthority(String...)   |사용자가 주어진 권한 중 어떤 것이라도 있다면 접근을 허용  |
+|hasIpAddress(String)   |주어진 IP로부터 요청이 왔다면 접근을 허용  |
+
+```java
+@Override
+protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth.inMemoryAuthentication().withUser("user").password("{noop}1111").roles("USER");
+    auth.inMemoryAuthentication().withUser("sys").password("{noop}1111").roles("SYS");
+    auth.inMemoryAuthentication().withUser("admin").password("{noop}1111").roles("ADMIN");
+}
+```
+```java
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http
+            .authorizeRequests()
+            .antMatchers("/user").hasRole("USER")
+            .antMatchers("/admin/pay").hasRole("ADMIN")
+            .antMatchers("/admin/**").access("hasRole('ADMIN') or hasRole('SYS')")
+            .anyRequest().authenticated();
+}
+```
+
+# 14. 인증/인가 API – ExceptionTranslationFilter & RequestCacheAwareFilter
+
+> ExceptionTranslationFilter
+
+- AuthenticationException 
+  - 인증 예외 처리 
+    1. AuthenticationEntryPoint 호출 
+       - 로그인 페이지 이동, 401 오류 코드 전달 등
+
+    2. 인증 예외가 발생하기 전의 요청 정보를 저장
+       - RequestCache - 사용자의 이전 요청 정보을 세션에 저장하고 이를 꺼내 오는 캐시 메카니즘
+       - SavedRequest - 사용자가 요청했던 request 파라미터 값들, 그 당시의 헤더값들 등이 저장
+
+- AccessDeniedException
+  - 인가 예외 처리
+    - AccessDeniedHandler 에서 예외 처리하도록 제공
+
+`http. exceptionHandling() // 예외처리 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+	 http.exceptionHandling() 					
+		.authenticationEntryPoint(authenticationEntryPoint())     	// 인증 실패 시 처리
+		.accessDeniedHandler(accessDeniedHandler()) 			// 인가 실패 시 처리
+}
+```
+
+```java
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+        http
+        .formLogin()
+        .successHandler(new AuthenticationSuccessHandler() {
+            @Override
+            public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                    RequestCache requestCache = new HttpSessionRequestCache();
+                    SavedRequest savedRequest = requestCache.getRequest(request, response);
+                    String redirectUrl = savedRequest.getRedirectUrl();
+                    response.sendRedirect(redirectUrl);
+            }
+        })
+        
+        http
+        .exceptionHandling()
+        .authenticationEntryPoint(new AuthenticationEntryPoint() {
+            @Override
+            public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+                    response.sendRedirect("/login");
+            }
+        })
+        .accessDeniedHandler(new AccessDeniedHandler() {
+            @Override
+            public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+                response.sendRedirect("/denied");
+            }
+        })
+        ;
+}
+```
