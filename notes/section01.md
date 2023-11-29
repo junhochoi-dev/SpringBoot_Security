@@ -95,7 +95,7 @@ protected void configure(HttpSecurity http) throws Exception {
 ```java
 protected void configure(HttpSecurity http) throws Exception {
 	 http.formLogin()
-            .loginPage("/login.html")   				// 사용자 정의 로그인 페이지
+            .loginPage("/login.html")   			// 사용자 정의 로그인 페이지
             .defaultSuccessUrl("/home")				// 로그인 성공 후 이동 페이지
             .failureUrl("/login.html?error=true")		// 로그인 실패 후 이동 페이지
             .usernameParameter("username")			// 아이디 파라미터명 설정
@@ -105,3 +105,264 @@ protected void configure(HttpSecurity http) throws Exception {
             .failureHandler(loginFailureHandler())		// 로그인 실패 후 핸들러
 }
 ```
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        http
+                .formLogin()
+                //.loginPage("/loginPage")
+                //.defaultSuccessUrl("/")
+                //.failureUrl("/login")
+                .usernameParameter("userid")
+                .passwordParameter("userpw")
+                .loginProcessingUrl("/login_proc")
+                .successHandler(new AuthenticationSuccessHandler() {
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                        System.out.println("Authentication:" + authentication.getName());
+                        response.sendRedirect("/");
+                    }
+                })
+                .failureHandler(new AuthenticationFailureHandler() {
+                    @Override
+                    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+                            System.out.println("Authentication:" + exception.getMessage());
+                        response.sendRedirect("/");
+                    }
+                })
+                .permitAll()
+                ;
+    }
+}
+```
+
+# 05. 인증 API – UsernamePasswordAuthenticationFilter
+
+# 06. 인증 API – Logout, LogoutFilter
+
+`http.logout() // 로그아웃 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+	 http.logout()						// 로그아웃 처리
+            .logoutUrl("/logout")				// 로그아웃 처리 URL
+            .logoutSuccessUrl("/login")			// 로그아웃 성공 후 이동페이지
+            .deleteCookies("JSESSIONID", "remember-me") 	// 로그아웃 후 쿠키 삭제
+            .addLogoutHandler(logoutHandler())		        // 로그아웃 핸들러
+            .logoutSuccessHandler(logoutSuccessHandler()) 	// 로그아웃 성공 후 핸들러
+}
+```
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        http
+                .formLogin()
+                //.loginPage("/loginPage")
+                //.defaultSuccessUrl("/")
+                //.failureUrl("/login")
+                .usernameParameter("userid")
+                .passwordParameter("userpw")
+                .loginProcessingUrl("/login_proc")
+                .successHandler(new AuthenticationSuccessHandler() {
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                        System.out.println("Authentication:" + authentication.getName());
+                        response.sendRedirect("/");
+                    }
+                })
+                .failureHandler(new AuthenticationFailureHandler() {
+                    @Override
+                    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+                        System.out.println("Authentication:" + exception.getMessage());
+                        response.sendRedirect("/");
+                    }
+                })
+                .permitAll()
+
+
+                .and()
+
+                .logout()
+                //.logoutUrl("/logout")
+                //.logoutSuccessUrl("/login")
+                .addLogoutHandler(new LogoutHandler() {
+                    @Override
+                    public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+                        HttpSession session = request.getSession();
+                        session.invalidate();
+                    }
+                })
+                .logoutSuccessHandler(new LogoutSuccessHandler() {
+                    @Override
+                    public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                        response.sendRedirect("/login");
+                    }
+                })
+                .deleteCookies("remember-me")
+                ;
+    }
+}
+```
+
+# 07. 인증 API – Remember Me 인증
+1. 세션이 만료되고 웹 브라우저가 종료된 후에도 어플리케이션이 사용자를 기억하는 기능
+
+2. Remember-Me 쿠키에 대한 Http 요청 을 확인한 후 토큰 기반 인증을 사용해 유효성을 검사하고 토큰이 검증되면 사용자는 로그인 된다
+
+3. 사용자 라이프 사이클
+   - 인증 성공(Remember-Me쿠키 설정)
+   - 인증 실패(쿠키가 존재하면 쿠키 무효화)
+   - 로그아웃(쿠키가 존재하면 쿠키 무효화)
+
+`http.rememberMe() // rememberMe 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+        http.rememberMe()
+        .rememberMeParameter(“remember”)        // 기본 파라미터명은 remember-me
+        .tokenValiditySeconds(3600)             // Default 는 14일
+        .alwaysRemember(true)                   // 리멤버 미 기능이 활성화되지 않아도 항상 실행 (일반적으로 False)
+        .userDetailsService(userDetailsService)
+}
+```
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+    @Autowired
+    UserDetailsService userDetailsService;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests()
+                .anyRequest().authenticated();
+        http
+                .formLogin()
+                //.loginPage("/loginPage")
+                //.defaultSuccessUrl("/")
+                //.failureUrl("/login")
+                .usernameParameter("userid")
+                .passwordParameter("userpw")
+                .loginProcessingUrl("/login_proc")
+                .successHandler(new AuthenticationSuccessHandler() {
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                        System.out.println("Authentication:" + authentication.getName());
+                        response.sendRedirect("/");
+                    }
+                })
+                .failureHandler(new AuthenticationFailureHandler() {
+                    @Override
+                    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+                        System.out.println("Authentication:" + exception.getMessage());
+                        response.sendRedirect("/");
+                    }
+                })
+                .permitAll()
+
+
+                .and()
+
+
+                .logout()
+                //.logoutUrl("/logout")
+                //.logoutSuccessUrl("/login")
+                .addLogoutHandler(new LogoutHandler() {
+                    @Override
+                    public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+                        HttpSession session = request.getSession();
+                        session.invalidate();
+                    }
+                })
+                .logoutSuccessHandler(new LogoutSuccessHandler() {
+                    @Override
+                    public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                        response.sendRedirect("/login");
+                    }
+                })
+                .deleteCookies("remember-me")
+
+
+                .and()
+
+
+                .rememberMe()
+                .rememberMeParameter("remember")
+                .tokenValiditySeconds(3600)
+                .userDetailsService(userDetailsService);
+        ;
+    }
+}
+```
+
+# 08. 인증 API – RememberMeAuthenticationFilter
+
+# 09. 인증 API – AnonymousAuthenticationFilter
+
+인증을 받지않은 사용자를 별도의 익명사용자용 필터를 사용하여 관리한다.
+
+- 익명사용자 인증 처리 필터
+- 익명사용자와 인증 사용자를 구분해서 처리하기 위한 용도로 사용
+- 화면에서 인증 여부를 구현할 때 isAnonymous() 와 isAuthenticated() 로 구분해서 사용
+- 인증객체를 세션에 저장하지 않는다
+
+# 10. 인증 API – 동시 세션 제어 / 세션 고정 보호 / 세션 정책
+
+> 동시 세션 제어
+
+동일한 계정으로 인증을 받을 때 생성되는 세션의 허용되는 개수가 제한되어 초과되었을 때 세션을 유지를 어떻게 할까?
+1. 이전 사용자 세션 만료
+2. 현재 사용자 인증 실패
+
+`http.sessionManagement() // 세션 관리 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {     
+        http.sessionManagement()
+        .maximumSessions(1)                     // 최대 허용 가능 세션 수 , -1 : 무제한 로그인 세션 허용
+        .maxSessionsPreventsLogin(true)         // 동시 로그인 차단함,  false : 기존 세션 만료(default)
+        .invalidSessionUrl("/invalid")          // 세션이 유효하지 않을 때 이동 할 페이지
+        .expiredUrl("/expired ")  	        // 세션이 만료된 경우 이동 할 페이지
+        }
+```
+
+> 세션 고정 보호
+
+`http.sessionManagement() // 세션 관리 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+	http.sessionManagement()
+                .sessionFixation().changeSessionId() // 기본값
+                // changeSessionId, none, migrateSession, newSession
+                // changeSessionID  : 세션 고정 공격 보호 | 이전 속성 그대로 사용 (Servlet 3.1 이상)
+                // none : 세션 고정 공격 가능
+                // migrateSession   : 세션 고정 공격 보호 | 이전 속성 그대로 사용 (Servlet 3.1 이하)
+                // newSession       : 세션 고정 공격 보호 | 이전 속성 새로 생성
+}
+```
+
+> 세션 정책
+
+`http.sessionManagement() // 세션 관리 기능이 작동함`
+```java
+protected void configure(HttpSecurity http) throws Exception {
+    http.sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy. If_Required )
+}
+```
+- SessionCreationPolicy. Always 		:  스프링 시큐리티가 항상 세션 생성
+- SessionCreationPolicy. If_Required 	:  스프링 시큐리티가 필요 시 생성(기본값)
+- SessionCreationPolicy. Never   		:  스프링 시큐리티가 생성하지 않지만 이미 존재하면 사용
+- SessionCreationPolicy. Stateless	 	:  스프링 시큐리티가 생성하지 않고 존재해도 사용하지 않음
+
+# 11. 인증 API – SessionManagementFilter ConcurrentSessionFilter
