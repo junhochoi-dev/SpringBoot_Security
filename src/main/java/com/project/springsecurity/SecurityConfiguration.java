@@ -10,7 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -21,16 +21,13 @@ import org.springframework.security.web.authentication.logout.LogoutSuccessHandl
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
-import org.springframework.web.bind.annotation.RequestBody;
 
-import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
-// SECTION 01
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -52,7 +49,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .antMatchers("/user").hasRole("USER")
                 .antMatchers("/admin/pay").hasRole("ADMIN")
                 .antMatchers("/admin/**").access("hasRole('ADMIN') or hasRole('SYS')")
-                .anyRequest().authenticated();
+                .anyRequest().authenticated()
+                ;
 
         http
                 .formLogin()
@@ -61,16 +59,16 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 //.failureUrl("/login")
                 .usernameParameter("userid")
                 .passwordParameter("userpw")
-                .loginProcessingUrl("/login_proc")
+                //.loginProcessingUrl("/login_proc")
                 .successHandler(new AuthenticationSuccessHandler() {
                     @Override
                     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
                         System.out.println("Authentication:" + authentication.getName());
-                        //response.sendRedirect("/");
-                        RequestCache requestCache = new HttpSessionRequestCache();
-                        SavedRequest savedRequest = requestCache.getRequest(request, response);
-                        String redirectUrl = savedRequest.getRedirectUrl();
-                        response.sendRedirect(redirectUrl);
+                        response.sendRedirect("/");
+                        //RequestCache requestCache = new HttpSessionRequestCache();
+                        //SavedRequest savedRequest = requestCache.getRequest(request, response);
+                        //String redirectUrl = savedRequest.getRedirectUrl();
+                        //response.sendRedirect(redirectUrl);
                     }
                 })
                 .failureHandler(new AuthenticationFailureHandler() {
@@ -111,7 +109,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .rememberMe()
                 .rememberMeParameter("remember")
                 .tokenValiditySeconds(3600)
-                .userDetailsService(userDetailsService);
+                .userDetailsService(userDetailsService)
+                ;
 
         http
                 .sessionManagement()
@@ -127,66 +126,69 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .sessionFixation().newSession()
                 ;
 
-        http
-                .exceptionHandling()
-                .authenticationEntryPoint(new AuthenticationEntryPoint() {
-                    @Override
-                    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-                        response.sendRedirect("/login");
-                    }
-                })
-                .accessDeniedHandler(new AccessDeniedHandler() {
-                    @Override
-                    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
-                        response.sendRedirect("/denied");
-                    }
-                })
-                ;
+//        http
+//                .exceptionHandling()
+//                .authenticationEntryPoint(new AuthenticationEntryPoint() {
+//                    @Override
+//                    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+//                        response.sendRedirect("/login");
+//                    }
+//                })
+//                .accessDeniedHandler(new AccessDeniedHandler() {
+//                    @Override
+//                    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+//                        response.sendRedirect("/denied");
+//                    }
+//                })
+//                ;
 
         http
                 //.csrf().disable();
-                .csrf();
+                .csrf()
+                ;
+
+        SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+        //SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_GLOBAL);
+        //SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_THREADLOCAL);
     }
 }
-
-// SECTION 02
-
-@Configuration
-@EnableWebSecurity
-@Order(0)
-class SecurityConfig01 extends WebSecurityConfigurerAdapter {
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-                .antMatcher("/admin/**")
-                .authorizeRequests()
-                .anyRequest().authenticated()
-
-
-                .and()
-
-
-                .httpBasic()
-        ;
-    }
-}
-
-
-@Configuration
-@EnableWebSecurity
-@Order(1)
-class SecurityConfig02 extends WebSecurityConfigurerAdapter {
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-                .authorizeRequests()
-                .anyRequest().permitAll()
-
-
-                .and()
-
-
-                .formLogin()
-        ;
-    }
-}
+//
+//@Configuration
+//@EnableWebSecurity
+//@Order(0)
+//class SecurityConfig01 extends WebSecurityConfigurerAdapter {
+//    @Override
+//    protected void configure(HttpSecurity http) throws Exception {
+//        http
+//                .antMatcher("/admin/**")
+//                .authorizeRequests()
+//                .anyRequest().authenticated()
+//
+//
+//                .and()
+//
+//
+//                .httpBasic()
+//        ;
+//    }
+//}
+//
+//
+//@Configuration
+//@EnableWebSecurity
+//@Order(1)
+//class SecurityConfig02 extends WebSecurityConfigurerAdapter {
+//    @Override
+//    protected void configure(HttpSecurity http) throws Exception {
+//        http
+//                .authorizeRequests()
+//                .anyRequest().permitAll()
+//
+//
+//                .and()
+//
+//
+//                .formLogin()
+//        ;
+//    }
+//}
