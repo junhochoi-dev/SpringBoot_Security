@@ -15,7 +15,7 @@ import com.project.springsecurity.domain.Account;
 import com.project.springsecurity.repository.UserRepository;
 
 @Service("userDetailService")
-public class CustomUserDetailsService implements UserDetailsService {
+public class UserDetailsServiceImpl implements UserDetailsService {
 
 	@Autowired
 	private UserRepository userRepository;

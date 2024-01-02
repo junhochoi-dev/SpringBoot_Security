@@ -3,15 +3,17 @@ package com.project.springsecurity.security.provider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.project.springsecurity.security.common.FormWebAuthenticationDetails;
 import com.project.springsecurity.security.service.AccountContext;
 
-public class CustomAuthenticationProvider implements AuthenticationProvider {
+public class FormAuthenticationProvider implements AuthenticationProvider {
 
 	@Autowired
 	private UserDetailsService userDetailsService;
@@ -26,8 +28,16 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
 		AccountContext accountContext = (AccountContext)userDetailsService.loadUserByUsername(username);
 
+		// ID PASSWORD
 		if(!passwordEncoder.matches(password, accountContext.getAccount().getPassword())){
 			throw new BadCredentialsException("BadCredentialException");
+		}
+
+		// SECRET KEY
+		FormWebAuthenticationDetails formWebAuthenticationDetails= (FormWebAuthenticationDetails) authentication.getDetails();
+		String secretKey = formWebAuthenticationDetails.getSecretKey();
+		if(secretKey == null || !"secret".equals(secretKey)){
+			throw new InsufficientAuthenticationException("InsufficientAuthenticationException");
 		}
 
 		UsernamePasswordAuthenticationToken authenticationToken =

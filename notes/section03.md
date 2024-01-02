@@ -141,3 +141,16 @@ public void configure(HttpSecurity http) throws Exception {
 - 인증 여부에 따라 로그인/로그아웃 표현
   - `<li sec:authorize="isAnonymous()"><a th:href="@{/login}">로그인</a></li>`
   - `<li sec:authorize="isAuthenticated()"><a th:href="@{/logout}">로그아웃</a></li>`
+
+# 08. Form 인증 – WebAuthenticationDetails, AuthenticationDetailsSource
+
+- WebAuthenticationDetails 
+  - 인증 과정 중 전달된 데이터를 저장 
+  - Authentication의 details 속성에 저장
+
+- AuthenticationDetailsSource
+  - WebAuthenticationDetails 객체를 생성
+
+# 09. Form 인증 – CustomAuthenticationSuccessHandler
+
+# 09. Form 인증 –CustomAuthenticationFailureHandler
